@@ -1,0 +1,18 @@
+# Fly.io deployment configuration
+app = "customgpt-telegram-bot"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  RATE_LIMIT_PER_USER_PER_DAY = "100"
+  RATE_LIMIT_PER_USER_PER_MINUTE = "5"
+
+[processes]
+  app = "python bot.py"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 256

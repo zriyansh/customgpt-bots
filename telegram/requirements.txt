@@ -1,0 +1,4 @@
+python-telegram-bot==21.0.1
+python-dotenv==1.0.0
+aiohttp==3.9.1
+structlog==23.2.0

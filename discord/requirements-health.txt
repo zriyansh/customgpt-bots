@@ -1,0 +1,5 @@
+# Optional requirements for health check server
+# Install with: pip install -r requirements-health.txt
+
+flask>=2.3.0
+gunicorn>=21.2.0

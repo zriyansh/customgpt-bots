@@ -1,0 +1,22 @@
+[Unit]
+Description=CustomGPT Discord Bot
+After=network.target
+
+[Service]
+Type=simple
+User=botuser
+WorkingDirectory=/home/botuser/customgpt-discord-bot
+Environment="PATH=/home/botuser/customgpt-discord-bot/venv/bin"
+ExecStart=/home/botuser/customgpt-discord-bot/venv/bin/python bot.py
+Restart=always
+RestartSec=10
+
+# Security options
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/home/botuser/customgpt-discord-bot/logs
+
+[Install]
+WantedBy=multi-user.target
