@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "index.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/index.js"
+    }
+  ],
+  "env": {
+    "FB_VERIFY_TOKEN": "@fb_verify_token",
+    "FB_PAGE_ACCESS_TOKEN": "@fb_page_access_token",
+    "FB_APP_SECRET": "@fb_app_secret",
+    "CUSTOMGPT_API_KEY": "@customgpt_api_key",
+    "CUSTOMGPT_AGENT_ID": "@customgpt_agent_id"
+  }
+}

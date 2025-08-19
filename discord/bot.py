@@ -124,7 +124,8 @@ class CustomGPTBot(commands.Cog):
         async with self.customgpt_client:
             response = await self.customgpt_client.send_message(
                 question,
-                str(channel.id)
+                str(channel.id),
+                inline_citations=False  # Don't include inline citations in the response
             )
             
             content = response['content']

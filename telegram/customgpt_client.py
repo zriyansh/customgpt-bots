@@ -4,6 +4,8 @@ import json
 from typing import Dict, List, Optional, AsyncGenerator
 import structlog
 from datetime import datetime
+import ssl
+import certifi
 
 logger = structlog.get_logger()
 
@@ -19,8 +21,12 @@ class CustomGPTClient:
         }
         self.session = None
         
+        # Create SSL context with proper certificates
+        self.ssl_context = ssl.create_default_context(cafile=certifi.where())
+        
     async def __aenter__(self):
-        self.session = aiohttp.ClientSession()
+        connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+        self.session = aiohttp.ClientSession(connector=connector)
         return self
         
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -29,21 +35,27 @@ class CustomGPTClient:
     
     async def ensure_session(self):
         if not self.session:
-            self.session = aiohttp.ClientSession()
+            connector = aiohttp.TCPConnector(ssl=self.ssl_context)
+            self.session = aiohttp.ClientSession(connector=connector)
     
-    async def create_conversation(self) -> Optional[str]:
+    async def create_conversation(self, name: Optional[str] = None) -> Optional[str]:
         """Create a new conversation and return the session ID"""
         await self.ensure_session()
         
         try:
             url = f"{self.api_url}/api/v1/projects/{self.project_id}/conversations"
             
-            async with self.session.post(url, headers=self.headers) as response:
-                if response.status == 200:
+            # Add name field as required by API
+            payload = {
+                "name": name or f"Telegram Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            }
+            
+            async with self.session.post(url, headers=self.headers, json=payload) as response:
+                if response.status in [200, 201]:
                     data = await response.json()
                     session_id = data.get('data', {}).get('session_id')
                     logger.info("conversation_created", 
-                               agent_id=self.project_id, 
+                               project_id=self.project_id, 
                                session_id=session_id)
                     return session_id
                 else:
@@ -69,7 +81,7 @@ class CustomGPTClient:
             url = f"{self.api_url}/api/v1/projects/{self.project_id}/conversations/{session_id}/messages"
             
             params = {
-                'stream': stream,
+                'stream': 'true' if stream else 'false',
                 'lang': language
             }
             
@@ -82,7 +94,7 @@ class CustomGPTClient:
                 payload['custom_persona'] = custom_persona
             
             if stream:
-                return await self._send_streaming_message(url, params, payload)
+                return self._send_streaming_message(url, params, payload)
             else:
                 return await self._send_regular_message(url, params, payload)
                 
@@ -106,21 +118,26 @@ class CustomGPTClient:
                            error=error_text)
                 return None
     
-    async def _send_streaming_message(self, url: str, params: Dict, payload: Dict) -> AsyncGenerator:
+    async def _send_streaming_message(self, url: str, params: Dict, payload: Dict):
         """Send a streaming message and yield chunks"""
         async with self.session.post(url, 
                                    headers=self.headers, 
                                    params=params,
                                    json=payload) as response:
             if response.status == 200:
+                full_response = ""
                 async for line in response.content:
                     if line:
                         line = line.decode('utf-8').strip()
                         if line.startswith('data: '):
                             try:
                                 data = json.loads(line[6:])
-                                yield data
+                                if 'openai_response' in data:
+                                    chunk = data['openai_response']
+                                    full_response += chunk
+                                    yield {'chunk': chunk, 'full': full_response}
                                 if data.get('status') == 'finish':
+                                    yield {'status': 'finish', 'full': full_response}
                                     break
                             except json.JSONDecodeError:
                                 continue

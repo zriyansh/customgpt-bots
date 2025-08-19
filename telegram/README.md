@@ -1,219 +1,239 @@
-# CustomGPT Telegram Bot
+# Telegram Bot for CustomGPT
 
-A Telegram bot that integrates with CustomGPT.ai to provide AI-powered conversations through your agent's knowledge base.
+A Telegram bot that integrates with CustomGPT.ai to provide AI-powered responses using your custom knowledge base.
+
+![CustomGPT Telegram Bot](../images/customgpt_telegram.jpeg)
 
 ## Features
 
-- 🤖 **AI-Powered Conversations**: Uses your CustomGPT agent to answer questions
-- 💬 **Context-Aware**: Maintains conversation context within sessions
-- 🎯 **Starter Questions**: Pre-configured question categories for easy onboarding
-- 🔒 **Rate Limiting**: Built-in protection against abuse (configurable limits)
-- 📊 **Usage Statistics**: Track daily usage and remaining quota
-- 🌐 **Simple Deployment**: Works on free hosting providers
-- 🚀 **Lightweight**: No database required, uses in-memory caching
+- 🤖 **AI-Powered Responses**: Uses CustomGPT.ai's API to answer questions from your knowledge base
+- 💬 **Conversation Management**: Maintains context within chat sessions
+- 🚦 **Rate Limiting**: Built-in daily (100) and per-minute (5) message limits
+- 🎯 **Starter Questions**: Interactive buttons with example queries
+- 📊 **Usage Statistics**: Track your daily usage with `/stats`
+- 🔄 **Session Management**: 30-minute conversation timeout with auto-cleanup
+- 🛡️ **Security**: SSL certificate handling and secure API communication
+
+## Project Structure
+
+```
+telegram/
+├── bot.py                 # Main bot implementation (polling mode)
+├── customgpt_client.py    # CustomGPT API client
+├── simple_cache.py        # In-memory rate limiting & session management
+├── requirements.txt       # Python dependencies
+├── .env                   # Environment variables (create your own)
+├── README.md             # This file
+├── vercel-bot/           # Vercel webhook deployment
+│   ├── api/
+│   │   └── webhook.py    # Webhook handler for Vercel
+│   ├── vercel.json       # Vercel configuration
+│   ├── set_webhook.py    # Webhook setup script
+│   └── README.md         # Vercel-specific instructions
+├── deploy-vercel.md      # Vercel deployment guide
+└── deploy-replit.md      # Replit deployment guide
+```
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.8+
 - Telegram Bot Token (from [@BotFather](https://t.me/botfather))
 - CustomGPT.ai API Key and Project ID
+- SSL certificates (handled automatically with certifi)
 
-## Quick Start
+## Installation
 
-### 1. Create a Telegram Bot
+1. **Clone the repository**:
+   ```bash
+   cd telegram/
+   ```
 
-1. Open Telegram and search for [@BotFather](https://t.me/botfather)
-2. Send `/newbot` and follow the prompts
-3. Save the bot token you receive
+2. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 2. Get CustomGPT Credentials
+3. **Set up environment variables**:
+   Create a `.env` file:
+   ```env
+   TELEGRAM_BOT_TOKEN=your_bot_token_here
+   CUSTOMGPT_API_KEY=your_api_key_here
+   CUSTOMGPT_PROJECT_ID=your_project_id_here
+   
+   # Optional configuration
+   DAILY_LIMIT=100
+   MINUTE_LIMIT=5
+   SESSION_TIMEOUT_MINUTES=30
+   ```
 
-1. Log in to [CustomGPT.ai](https://app.customgpt.ai)
-2. Go to your agent/project settings
-3. Find your Project ID and API Key
+## Running the Bot
 
-### 3. Local Setup
-
+### Local Development (Polling Mode)
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd customgpt-integrations/telegram
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Copy environment file
-cp .env.simple .env
-
-# Edit .env with your credentials
-# TELEGRAM_BOT_TOKEN=your_bot_token
-# CUSTOMGPT_API_KEY=your_api_key
-# CUSTOMGPT_PROJECT_ID=your_project_id
-
-# Run the bot
 python bot.py
 ```
 
-## Configuration
-
-### Environment Variables
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `TELEGRAM_BOT_TOKEN` | Yes | - | Your Telegram bot token |
-| `CUSTOMGPT_API_KEY` | Yes | - | Your CustomGPT API key |
-| `CUSTOMGPT_PROJECT_ID` | Yes | - | Your CustomGPT project/agent ID |
-| `CUSTOMGPT_API_URL` | No | https://app.customgpt.ai | API endpoint |
-| `RATE_LIMIT_PER_USER_PER_DAY` | No | 100 | Daily message limit per user |
-| `RATE_LIMIT_PER_USER_PER_MINUTE` | No | 5 | Per-minute message limit |
-
-## Deployment
-
-### Free Hosting Options
-
-#### 1. Render.com (Recommended)
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy)
-
-1. Click the button above or manually:
-2. Create account at [render.com](https://render.com)
-3. New > Background Worker
-4. Connect your GitHub repo
-5. Use `render.yaml` configuration
-6. Add environment variables in dashboard
-7. Deploy!
-
-#### 2. Railway
-
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template)
-
-1. Click deploy button or go to [railway.app](https://railway.app)
-2. New Project > Deploy from GitHub
-3. Select your repository
-4. Add environment variables
-5. Deploy automatically
-
-#### 3. Fly.io
-
-```bash
-# Install flyctl
-curl -L https://fly.io/install.sh | sh
-
-# Login
-flyctl auth login
-
-# Create app
-flyctl launch
-
-# Set secrets
-flyctl secrets set TELEGRAM_BOT_TOKEN=xxx
-flyctl secrets set CUSTOMGPT_API_KEY=xxx
-flyctl secrets set CUSTOMGPT_PROJECT_ID=xxx
-
-# Deploy
-flyctl deploy
-```
-
-#### 4. Heroku
-
-```bash
-# Create app
-heroku create your-bot-name
-
-# Set environment
-heroku config:set TELEGRAM_BOT_TOKEN=xxx
-heroku config:set CUSTOMGPT_API_KEY=xxx
-heroku config:set CUSTOMGPT_PROJECT_ID=xxx
-
-# Deploy
-git push heroku main
-```
+This runs the bot in polling mode - perfect for development and testing.
 
 ## Bot Commands
 
-- `/start` - Start a new conversation
-- `/help` - Show help information
-- `/examples` - Show example questions
-- `/stats` - View usage statistics
-- `/clear` - Clear conversation history
+- `/start` - Welcome message with example question buttons
+- `/help` - Show available commands and tips
+- `/examples` - Display example questions you can ask
+- `/stats` - View your usage statistics
+- `/clear` - Clear conversation history and start fresh
 
-## Extending the Bot
+## Deployment Options
 
-### Adding Custom Commands
+### 1. Vercel (Webhook Mode) - Free
+Best for: Simple bots with quick responses
 
+**Pros**:
+- ✅ Completely free
+- ✅ Auto-scaling
+- ✅ HTTPS included
+- ✅ Easy deployment
+
+**Cons**:
+- ❌ 10-second timeout limit
+- ❌ No persistent storage
+- ❌ Cold starts
+- ❌ No rate limiting
+
+See [`vercel-bot/README.md`](vercel-bot/README.md) for detailed instructions.
+
+### 2. Replit (Polling Mode) - Free with limitations
+Best for: Development and testing
+
+**Pros**:
+- ✅ Free tier available
+- ✅ Persistent storage
+- ✅ Web IDE
+- ✅ Easy setup
+
+**Cons**:
+- ❌ Sleeps after inactivity
+- ❌ Requires pinging to stay alive
+- ❌ Limited resources
+
+See [`deploy-replit.md`](deploy-replit.md) for instructions.
+
+### 3. Railway (Polling/Webhook) - Paid
+Best for: Production bots
+
+**Pros**:
+- ✅ No timeout limits
+- ✅ Persistent storage options
+- ✅ Better performance
+- ✅ Supports both modes
+
+**Cons**:
+- ❌ Requires payment
+- ❌ More complex setup
+
+### 4. VPS/Cloud (Any Mode) - Varies
+Best for: Full control
+
+**Options**:
+- AWS EC2 (free tier)
+- Google Cloud (free tier)
+- DigitalOcean ($5/month)
+- Any Linux VPS
+
+## Technical Details
+
+### Rate Limiting
+- **Daily Limit**: 100 messages per user
+- **Minute Limit**: 5 messages per minute
+- **Implementation**: In-memory cache (resets on restart)
+
+### Session Management
+- **Timeout**: 30 minutes of inactivity
+- **Storage**: In-memory (non-persistent)
+- **Cleanup**: Automatic for expired sessions
+
+### API Integration
+- **CustomGPT API**: RESTful API with streaming support
+- **SSL Handling**: Uses certifi for certificate verification
+- **Error Handling**: Graceful degradation with user-friendly messages
+
+## Common Issues & Solutions
+
+### SSL Certificate Error (macOS)
 ```python
-# In bot.py, add a new handler:
-async def custom_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Your custom response")
-
-# Register it in main():
-application.add_handler(CommandHandler("custom", custom_command))
+# Already fixed in customgpt_client.py
+import certifi
+import ssl
+ssl_context = ssl.create_default_context(cafile=certifi.where())
 ```
 
-### Customizing Rate Limits
-
-Modify the environment variables or update the code:
-
-```python
-# In bot.py
-DAILY_LIMIT = int(os.getenv('RATE_LIMIT_PER_USER_PER_DAY', '100'))
-MINUTE_LIMIT = int(os.getenv('RATE_LIMIT_PER_USER_PER_MINUTE', '5'))
-```
-
-### Adding Webhooks (for production)
-
-For better performance, you can use webhooks instead of polling:
-
-```python
-# Replace run_polling with:
-application.run_webhook(
-    listen="0.0.0.0",
-    port=int(os.environ.get('PORT', 8443)),
-    url_path=BOT_TOKEN,
-    webhook_url=f"https://your-app.com/{BOT_TOKEN}"
-)
-```
-
-## Security Best Practices
-
-1. **Never commit `.env` files** - Use `.env.example` as template
-2. **Use environment variables** for all sensitive data
-3. **Enable rate limiting** to prevent abuse
-4. **Validate user input** before sending to API
-5. **Monitor usage** through stats and logs
-6. **Set up allowed users** list if needed (modify code)
-
-## Monitoring
-
-The bot includes basic health check endpoints when deployed:
-
-- `/health` - Basic health status
-- `/metrics` - Usage metrics
-
-## Troubleshooting
-
-### Bot not responding
-
+### Bot Not Responding
 1. Check bot token is correct
-2. Ensure bot is not already running elsewhere
-3. Check logs for errors
+2. Verify API credentials
+3. Ensure bot is running (`python bot.py`)
+4. Check network connectivity
 
-### API errors
+### Rate Limit Exceeded
+- Wait for the timeout period
+- Daily limits reset at midnight
+- Minute limits reset after 60 seconds
 
-1. Verify API key and Project ID
-2. Check rate limits on CustomGPT
-3. Ensure API URL is correct
+### Session Expired
+- Use `/clear` to start a new conversation
+- Sessions timeout after 30 minutes of inactivity
 
-### Rate limit issues
+## Development Tips
 
-1. Adjust limits in environment variables
-2. Clear cache if testing locally
-3. Check user statistics with `/stats`
+### Testing Locally
+1. Use polling mode for easier debugging
+2. Set lower rate limits for testing
+3. Use `/stats` to monitor usage
 
-## Contributing
+### Adding Features
+- Extend `handle_message` in `bot.py` for new commands
+- Modify `simple_cache.py` for persistence
+- Update `customgpt_client.py` for API changes
 
-Feel free to submit issues and enhancement requests!
+### Debugging
+```python
+# Enable debug logging
+import logging
+logging.basicConfig(level=logging.DEBUG)
+```
+
+## Security Considerations
+
+1. **Never commit `.env` file** - It contains sensitive credentials
+2. **Use environment variables** for all secrets
+3. **Implement user allowlisting** if needed:
+   ```python
+   ALLOWED_USERS = [123456789]  # Telegram user IDs
+   ```
+4. **Monitor usage** with `/stats` command
+5. **Set appropriate rate limits** based on your needs
+
+## Future Enhancements
+
+- [ ] Persistent storage (PostgreSQL/Redis)
+- [ ] User authentication
+- [ ] Admin dashboard
+- [ ] Multiple language support
+- [ ] Voice message support
+- [ ] Image analysis capabilities
+- [ ] Webhook mode for main bot
+- [ ] Docker containerization
 
 ## License
 
 MIT
+
+## Support
+
+For issues:
+1. Check the [Common Issues](#common-issues--solutions) section
+2. Review logs for error messages
+3. Ensure all prerequisites are met
+4. Verify API credentials are correct
+
+For CustomGPT API issues, refer to their documentation.
+For Telegram Bot API issues, check [Telegram Bot Documentation](https://core.telegram.org/bots/api).

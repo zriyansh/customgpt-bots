@@ -1,0 +1,481 @@
+<script>
+// Global variables
+let config = {};
+let messageHistory = [];
+let isTyping = false;
+let currentTheme = 'light';
+
+// Initialize app on load
+document.addEventListener('DOMContentLoaded', function() {
+  initializeApp();
+  setupEventListeners();
+  loadTheme();
+});
+
+// Initialize the application
+function initializeApp() {
+  showLoading();
+  
+  // Get configuration from server
+  google.script.run
+    .withSuccessHandler(handleConfigSuccess)
+    .withFailureHandler(handleConfigError)
+    .getWebConfig();
+}
+
+// Handle successful config load
+function handleConfigSuccess(data) {
+  config = data;
+  hideLoading();
+  
+  // Display agent info if available
+  if (config.agentInfo) {
+    updateAgentInfo(config.agentInfo);
+  }
+  
+  // Load starter questions
+  if (config.starterQuestions && config.starterQuestions.length > 0) {
+    displayStarterQuestions(config.starterQuestions);
+  }
+  
+  // Set user info
+  if (config.user) {
+    document.getElementById('user-email').textContent = config.user;
+  }
+}
+
+// Handle config load error
+function handleConfigError(error) {
+  hideLoading();
+  showError('Failed to load configuration. Please refresh the page.');
+  console.error('Config error:', error);
+}
+
+// Setup event listeners
+function setupEventListeners() {
+  // Form submission
+  const form = document.getElementById('chat-form');
+  form.addEventListener('submit', handleFormSubmit);
+  
+  // Text area auto-resize and character count
+  const input = document.getElementById('user-input');
+  input.addEventListener('input', function() {
+    autoResizeTextarea(this);
+    updateCharCount(this.value.length);
+  });
+  
+  // Enter key handling
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      form.dispatchEvent(new Event('submit'));
+    }
+  });
+}
+
+// Handle form submission
+function handleFormSubmit(e) {
+  e.preventDefault();
+  
+  const input = document.getElementById('user-input');
+  const message = input.value.trim();
+  
+  if (!message) return;
+  
+  // Clear input
+  input.value = '';
+  autoResizeTextarea(input);
+  updateCharCount(0);
+  
+  // Display user message
+  displayMessage(message, 'user');
+  
+  // Hide starter questions after first message
+  hideStarterQuestions();
+  
+  // Send message to server
+  sendMessage(message);
+}
+
+// Send message to CustomGPT
+function sendMessage(message) {
+  showTypingIndicator();
+  disableInput(true);
+  
+  google.script.run
+    .withSuccessHandler(handleMessageSuccess)
+    .withFailureHandler(handleMessageError)
+    .sendWebMessage(message);
+}
+
+// Handle successful message response
+function handleMessageSuccess(response) {
+  hideTypingIndicator();
+  disableInput(false);
+  
+  if (response.success) {
+    const data = response.data;
+    displayMessage(data.content, 'bot', data.citations);
+  } else {
+    showError(response.error || 'Failed to get response');
+  }
+}
+
+// Handle message error
+function handleMessageError(error) {
+  hideTypingIndicator();
+  disableInput(false);
+  showError('Failed to send message. Please try again.');
+  console.error('Message error:', error);
+}
+
+// Display a message in the chat
+function displayMessage(content, sender, citations = []) {
+  const container = document.getElementById('chat-container');
+  
+  // Create message element
+  const messageDiv = document.createElement('div');
+  messageDiv.className = `message ${sender}-message`;
+  
+  // Create avatar
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'message-avatar';
+  const avatarIcon = document.createElement('i');
+  avatarIcon.className = 'material-icons';
+  avatarIcon.textContent = sender === 'user' ? 'person' : 'smart_toy';
+  avatarDiv.appendChild(avatarIcon);
+  
+  // Create content
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'message-content';
+  
+  // Parse and format content
+  const formattedContent = formatMessageContent(content);
+  contentDiv.innerHTML = `<p>${formattedContent}</p>`;
+  
+  // Add citations if available
+  if (citations && citations.length > 0 && sender === 'bot') {
+    const citationsDiv = createCitationsElement(citations);
+    contentDiv.appendChild(citationsDiv);
+  }
+  
+  // Assemble message
+  messageDiv.appendChild(avatarDiv);
+  messageDiv.appendChild(contentDiv);
+  container.appendChild(messageDiv);
+  
+  // Scroll to bottom
+  scrollToBottom();
+  
+  // Save to history
+  messageHistory.push({
+    content: content,
+    sender: sender,
+    citations: citations,
+    timestamp: new Date()
+  });
+}
+
+// Format message content (basic markdown support)
+function formatMessageContent(content) {
+  // Escape HTML
+  content = content.replace(/&/g, '&amp;')
+                   .replace(/</g, '&lt;')
+                   .replace(/>/g, '&gt;')
+                   .replace(/"/g, '&quot;')
+                   .replace(/'/g, '&#039;');
+  
+  // Basic markdown formatting
+  // Bold
+  content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+  
+  // Italic
+  content = content.replace(/\*(.*?)\*/g, '<em>$1</em>');
+  
+  // Code blocks
+  content = content.replace(/```([\s\S]*?)```/g, '<code>$1</code>');
+  
+  // Inline code
+  content = content.replace(/`(.*?)`/g, '<code>$1</code>');
+  
+  // Links
+  content = content.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+  
+  // Line breaks
+  content = content.replace(/\n/g, '<br>');
+  
+  return content;
+}
+
+// Create citations element
+function createCitationsElement(citations) {
+  const citationsDiv = document.createElement('div');
+  citationsDiv.className = 'citations';
+  
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'citations-title';
+  titleDiv.textContent = '📚 Sources';
+  citationsDiv.appendChild(titleDiv);
+  
+  citations.forEach((citation, index) => {
+    const citationItem = document.createElement('div');
+    citationItem.className = 'citation-item';
+    
+    const link = document.createElement('a');
+    link.href = citation.url || '#';
+    link.target = '_blank';
+    link.textContent = citation.title || `Source ${index + 1}`;
+    
+    citationItem.appendChild(link);
+    citationsDiv.appendChild(citationItem);
+  });
+  
+  return citationsDiv;
+}
+
+// Display starter questions
+function displayStarterQuestions(questions) {
+  const container = document.getElementById('starter-buttons');
+  container.innerHTML = '';
+  
+  questions.forEach(question => {
+    const button = document.createElement('button');
+    button.className = 'starter-button';
+    button.textContent = question;
+    button.onclick = () => handleStarterClick(question);
+    container.appendChild(button);
+  });
+}
+
+// Handle starter question click
+function handleStarterClick(question) {
+  const input = document.getElementById('user-input');
+  input.value = question;
+  autoResizeTextarea(input);
+  updateCharCount(question.length);
+  document.getElementById('chat-form').dispatchEvent(new Event('submit'));
+}
+
+// Hide starter questions
+function hideStarterQuestions() {
+  const container = document.getElementById('starter-questions');
+  container.style.display = 'none';
+}
+
+// Show typing indicator
+function showTypingIndicator() {
+  const container = document.getElementById('chat-container');
+  
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'message bot-message';
+  typingDiv.id = 'typing-indicator';
+  
+  const avatarDiv = document.createElement('div');
+  avatarDiv.className = 'message-avatar';
+  const avatarIcon = document.createElement('i');
+  avatarIcon.className = 'material-icons';
+  avatarIcon.textContent = 'smart_toy';
+  avatarDiv.appendChild(avatarIcon);
+  
+  const contentDiv = document.createElement('div');
+  contentDiv.className = 'message-content typing-indicator';
+  contentDiv.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+  
+  typingDiv.appendChild(avatarDiv);
+  typingDiv.appendChild(contentDiv);
+  container.appendChild(typingDiv);
+  
+  scrollToBottom();
+  isTyping = true;
+}
+
+// Hide typing indicator
+function hideTypingIndicator() {
+  const indicator = document.getElementById('typing-indicator');
+  if (indicator) {
+    indicator.remove();
+  }
+  isTyping = false;
+}
+
+// Utility Functions
+
+// Auto-resize textarea
+function autoResizeTextarea(textarea) {
+  textarea.style.height = 'auto';
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+}
+
+// Update character count
+function updateCharCount(length) {
+  const counter = document.getElementById('char-count');
+  counter.textContent = `${length} / 2000`;
+  counter.style.color = length > 1800 ? 'var(--error-color)' : 'var(--on-surface-variant)';
+}
+
+// Scroll to bottom of chat
+function scrollToBottom() {
+  const container = document.getElementById('chat-container');
+  setTimeout(() => {
+    container.scrollTop = container.scrollHeight;
+  }, 100);
+}
+
+// Disable/enable input
+function disableInput(disabled) {
+  const input = document.getElementById('user-input');
+  const button = document.getElementById('send-button');
+  input.disabled = disabled;
+  button.disabled = disabled;
+}
+
+// Show loading overlay
+function showLoading() {
+  document.getElementById('loading').classList.add('active');
+}
+
+// Hide loading overlay
+function hideLoading() {
+  document.getElementById('loading').classList.remove('active');
+}
+
+// Show error toast
+function showError(message) {
+  const toast = document.getElementById('error-toast');
+  const messageElement = document.getElementById('error-message');
+  
+  messageElement.textContent = message;
+  toast.classList.add('show');
+  
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 5000);
+}
+
+// Show info modal
+function showInfo() {
+  document.getElementById('info-modal').classList.add('active');
+}
+
+// Close modal
+function closeModal(modalId) {
+  document.getElementById(modalId).classList.remove('active');
+}
+
+// Update agent info in modal
+function updateAgentInfo(info) {
+  const container = document.getElementById('agent-info');
+  container.innerHTML = `
+    <div class="info-item">
+      <div class="info-label">Agent Name</div>
+      <div class="info-value">${info.project_name || 'CustomGPT Agent'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Agent ID</div>
+      <div class="info-value">${info.id || 'N/A'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Status</div>
+      <div class="info-value">${info.status || 'Active'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Created</div>
+      <div class="info-value">${info.created_at ? new Date(info.created_at).toLocaleDateString() : 'N/A'}</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Pages Indexed</div>
+      <div class="info-value">${info.pages_count || 0}</div>
+    </div>
+  `;
+}
+
+// Reset chat
+function resetChat() {
+  if (confirm('Are you sure you want to reset the conversation?')) {
+    const container = document.getElementById('chat-container');
+    
+    // Keep only welcome message
+    const messages = container.querySelectorAll('.message:not(.welcome-message)');
+    messages.forEach(msg => msg.remove());
+    
+    // Clear history
+    messageHistory = [];
+    
+    // Show starter questions
+    document.getElementById('starter-questions').style.display = 'block';
+    
+    showError('Conversation has been reset');
+  }
+}
+
+// Theme Management
+
+// Toggle theme
+function toggleTheme() {
+  currentTheme = currentTheme === 'light' ? 'dark' : 'light';
+  applyTheme(currentTheme);
+  saveTheme(currentTheme);
+}
+
+// Apply theme
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  
+  const icon = document.getElementById('theme-icon');
+  icon.textContent = theme === 'light' ? 'dark_mode' : 'light_mode';
+}
+
+// Save theme preference
+function saveTheme(theme) {
+  try {
+    localStorage.setItem('customgpt-theme', theme);
+  } catch (e) {
+    // LocalStorage might not be available
+  }
+}
+
+// Load saved theme
+function loadTheme() {
+  try {
+    const savedTheme = localStorage.getItem('customgpt-theme');
+    if (savedTheme) {
+      currentTheme = savedTheme;
+      applyTheme(currentTheme);
+    }
+  } catch (e) {
+    // LocalStorage might not be available
+  }
+}
+
+// Export chat history
+function exportChat() {
+  const content = messageHistory.map(msg => {
+    const sender = msg.sender === 'user' ? 'You' : 'CustomGPT';
+    const time = new Date(msg.timestamp).toLocaleString();
+    return `[${time}] ${sender}: ${msg.content}`;
+  }).join('\n\n');
+  
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `customgpt-chat-${new Date().toISOString().split('T')[0]}.txt`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// Handle window resize
+window.addEventListener('resize', () => {
+  // Ensure chat stays scrolled to bottom on resize
+  if (isTyping || messageHistory.length > 0) {
+    scrollToBottom();
+  }
+});
+
+// Handle visibility change (for rate limit updates)
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    // Could refresh rate limit info here if needed
+  }
+});
+</script>

@@ -28,6 +28,7 @@ MAX_MESSAGE_LENGTH = int(os.getenv('MAX_MESSAGE_LENGTH', '2000'))
 # Bot Configuration
 ENABLE_STARTER_QUESTIONS = os.getenv('ENABLE_STARTER_QUESTIONS', 'True').lower() == 'true'
 TYPING_INDICATOR = os.getenv('TYPING_INDICATOR', 'True').lower() == 'true'
+ENABLE_CITATIONS = os.getenv('ENABLE_CITATIONS', 'True').lower() == 'true'
 ERROR_MESSAGES = {
     'rate_limit': "⏱️ You've reached your query limit. Please wait a moment before asking again.",
     'api_error': "😕 Sorry, I couldn't process your request. Please try again later.",

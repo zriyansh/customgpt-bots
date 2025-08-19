@@ -37,21 +37,25 @@ class CustomGPTClient:
         """Create a new conversation session"""
         url = f"{self.api_url}/projects/{self.agent_id}/conversations"
         
+        # Add an empty JSON body as some APIs require it
+        payload = {}
+        
         try:
-            async with self._session.post(url, headers=self.headers) as response:
+            async with self._session.post(url, headers=self.headers, json=payload) as response:
+                response_text = await response.text()
                 if response.status == 200 or response.status == 201:
-                    data = await response.json()
+                    data = json.loads(response_text)
                     return data['data']['session_id']
                 else:
-                    logger.error(f"Failed to create conversation: {response.status}")
+                    logger.error(f"Failed to create conversation: {response.status} - Response: {response_text}")
                     raise Exception(f"Failed to create conversation: {response.status}")
         except Exception as e:
             logger.error(f"Error creating conversation: {e}")
             raise
     
-    async def send_message(self, message: str, channel_id: str, stream: bool = False) -> Dict[str, Any]:
+    async def send_message(self, message: str, channel_id: str, stream: bool = False, inline_citations: bool = False) -> Dict[str, Any]:
         """Send a message to CustomGPT using OpenAI format for better compatibility"""
-        session_id = await self.get_or_create_session(channel_id)
+        # The OpenAI format endpoint doesn't require a session_id
         url = f"{self.api_url}/projects/{self.agent_id}/chat/completions"
         
         payload = {
@@ -63,12 +67,12 @@ class CustomGPTClient:
             ],
             "stream": stream,
             "lang": "en",
-            "is_inline_citation": True
+            "is_inline_citation": inline_citations
         }
         
         try:
             async with self._session.post(url, headers=self.headers, json=payload) as response:
-                if response.status == 200:
+                if response.status == 200 or response.status == 201:
                     if stream:
                         return self._handle_stream(response)
                     else:
@@ -104,15 +108,17 @@ class CustomGPTClient:
         if 'choices' in data and data['choices']:
             message_content = data['choices'][0]['message']['content']
             
-            # Extract citations if available
+            # Extract citations if available (might be in different locations)
             citations = []
             if 'citations' in data:
                 citations = data['citations']
+            elif 'choices' in data and data['choices'] and 'citations' in data['choices'][0]:
+                citations = data['choices'][0]['citations']
             
             return {
                 'content': message_content,
                 'citations': citations,
-                'session_id': data.get('session_id', '')
+                'session_id': data.get('id', '')  # OpenAI format uses 'id' instead of 'session_id'
             }
         else:
             raise Exception("Invalid response format")

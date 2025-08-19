@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: customgpt-whatsapp-bot
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python bot.py
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      # Add other environment variables in Render dashboard

@@ -1,0 +1,39 @@
+# Web framework for webhook
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+python-multipart==0.0.6
+
+# Twilio for WhatsApp integration
+twilio==8.11.0
+
+# Async HTTP client for CustomGPT API
+httpx==0.25.2
+aiohttp==3.9.1
+
+# Environment and config
+python-dotenv==1.0.0
+pydantic==2.5.2
+pydantic-settings==2.1.0
+
+# Logging
+structlog==23.2.0
+
+# Redis for rate limiting (optional)
+redis==5.0.1
+
+# Caching
+cachetools==5.3.2
+
+# Utilities
+python-dateutil==2.8.2
+pytz==2023.3
+
+# Phone number validation
+phonenumbers==8.13.27
+
+# Development tools (optional)
+pytest==7.4.3
+pytest-asyncio==0.21.1
+black==23.12.0
+isort==5.13.2
+flake8==6.1.0

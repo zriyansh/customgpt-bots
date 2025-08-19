@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 import asyncio
 from collections import defaultdict
 
@@ -37,7 +37,7 @@ class SimpleCache:
             if key in self.data:
                 del self.data[key]
     
-    async def check_rate_limit(self, user_id: int, daily_limit: int = 100, minute_limit: int = 5) -> tuple[bool, Optional[str], Dict]:
+    async def check_rate_limit(self, user_id: int, daily_limit: int = 100, minute_limit: int = 5) -> Tuple[bool, Optional[str], Dict]:
         """Check rate limits for user"""
         async with self.lock:
             now = datetime.now()

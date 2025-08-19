@@ -2,6 +2,8 @@
 
 A Discord bot that integrates with CustomGPT's API to answer questions using your agent's knowledge base.
 
+![CustomGPT Discord Bot](../images/customgpt_discord.jpeg)
+
 ## Features
 
 - 🤖 **AI-Powered Responses**: Uses CustomGPT's API to provide intelligent answers
@@ -57,8 +59,10 @@ RATE_LIMIT_PER_CHANNEL=30
 2. Create a New Application
 3. Go to Bot section and create a bot
 4. Copy the bot token
-5. Enable these Privileged Gateway Intents:
-   - Message Content Intent
+5. **IMPORTANT**: Enable Privileged Gateway Intents:
+   - Scroll down to "Privileged Gateway Intents"
+   - Toggle ON the "MESSAGE CONTENT INTENT" (Required for the bot to read messages)
+   - Click "Save Changes"
 6. Go to OAuth2 > URL Generator
 7. Select scopes: `bot`, `applications.commands`
 8. Select permissions: `Send Messages`, `Embed Links`, `Read Message History`, `Use Slash Commands`
@@ -161,6 +165,12 @@ For distributed rate limiting across multiple bot instances:
 - Check bot token is correct
 - Verify bot has proper permissions
 - Check allowed channels/roles configuration
+
+### PrivilegedIntentsRequired Error
+- Go to Discord Developer Portal
+- Select your application > Bot section
+- Enable "MESSAGE CONTENT INTENT" under Privileged Gateway Intents
+- Save changes and restart the bot
 
 ### API errors
 - Verify CustomGPT API key and Agent ID

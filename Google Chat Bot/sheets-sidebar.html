@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <style>
+    body {
+      font-family: Roboto, Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      font-size: 14px;
+    }
+    
+    .container {
+      padding: 16px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      margin-bottom: 16px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      padding: 12px;
+      background: #fafafa;
+    }
+    
+    .message {
+      margin-bottom: 12px;
+      padding: 8px;
+      border-radius: 4px;
+    }
+    
+    .user-message {
+      background: #e3f2fd;
+      text-align: right;
+    }
+    
+    .bot-message {
+      background: #f5f5f5;
+    }
+    
+    .input-group {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .input-field {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+    
+    .btn {
+      padding: 8px 16px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    
+    .btn:hover {
+      background: #1557b0;
+    }
+    
+    .btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    
+    .actions {
+      margin-top: 12px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    
+    .action-btn {
+      padding: 4px 12px;
+      background: #f5f5f5;
+      border: 1px solid #e0e0e0;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+    
+    .action-btn:hover {
+      background: #e0e0e0;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #666;
+      padding: 8px;
+    }
+    
+    .error {
+      color: #d32f2f;
+      font-size: 12px;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="chat-container" id="chatContainer">
+      <div class="message bot-message">
+        Welcome! Ask me anything about your data or paste content for analysis.
+      </div>
+    </div>
+    
+    <div class="input-group">
+      <input type="text" id="questionInput" class="input-field" 
+             placeholder="Ask a question..." 
+             onkeypress="handleKeyPress(event)">
+      <button id="sendBtn" class="btn" onclick="sendQuestion()">
+        Send
+      </button>
+    </div>
+    
+    <div class="actions">
+      <button class="action-btn" onclick="insertAtCursor()">
+        Insert at Cursor
+      </button>
+      <button class="action-btn" onclick="processSelection()">
+        Process Selection
+      </button>
+      <button class="action-btn" onclick="clearChat()">
+        Clear Chat
+      </button>
+    </div>
+    
+    <div id="error" class="error"></div>
+  </div>
+
+  <script>
+    let lastResponse = '';
+    
+    function handleKeyPress(e) {
+      if (e.key === 'Enter') {
+        sendQuestion();
+      }
+    }
+    
+    function sendQuestion() {
+      const input = document.getElementById('questionInput');
+      const question = input.value.trim();
+      
+      if (!question) return;
+      
+      // Add user message
+      addMessage(question, 'user');
+      
+      // Clear input
+      input.value = '';
+      
+      // Disable send button
+      document.getElementById('sendBtn').disabled = true;
+      
+      // Show loading
+      addMessage('<div class="loading">Thinking...</div>', 'bot', true);
+      
+      // Send to server
+      google.script.run
+        .withSuccessHandler(handleResponse)
+        .withFailureHandler(handleError)
+        .sendWebMessage(question);
+    }
+    
+    function handleResponse(response) {
+      // Remove loading message
+      removeLastMessage();
+      
+      // Enable send button
+      document.getElementById('sendBtn').disabled = false;
+      
+      if (response.success) {
+        lastResponse = response.data.content;
+        addMessage(lastResponse, 'bot');
+      } else {
+        showError(response.error || 'Failed to get response');
+      }
+    }
+    
+    function handleError(error) {
+      removeLastMessage();
+      document.getElementById('sendBtn').disabled = false;
+      showError(error.message);
+    }
+    
+    function addMessage(text, sender, isHtml = false) {
+      const container = document.getElementById('chatContainer');
+      const messageDiv = document.createElement('div');
+      messageDiv.className = `message ${sender}-message`;
+      
+      if (isHtml) {
+        messageDiv.innerHTML = text;
+      } else {
+        messageDiv.textContent = text;
+      }
+      
+      container.appendChild(messageDiv);
+      container.scrollTop = container.scrollHeight;
+    }
+    
+    function removeLastMessage() {
+      const container = document.getElementById('chatContainer');
+      const messages = container.querySelectorAll('.message');
+      if (messages.length > 0) {
+        messages[messages.length - 1].remove();
+      }
+    }
+    
+    function insertAtCursor() {
+      if (!lastResponse) {
+        showError('No response to insert');
+        return;
+      }
+      
+      google.script.run
+        .withFailureHandler(handleError)
+        .insertResponse(lastResponse);
+    }
+    
+    function processSelection() {
+      google.script.run
+        .withSuccessHandler(function(questions) {
+          if (questions && questions.length > 0) {
+            questions.forEach(q => {
+              if (q) sendQuestion(q);
+            });
+          } else {
+            showError('No questions found in selection');
+          }
+        })
+        .withFailureHandler(handleError)
+        .getSelectedColumnQuestions();
+    }
+    
+    function clearChat() {
+      const container = document.getElementById('chatContainer');
+      container.innerHTML = `
+        <div class="message bot-message">
+          Welcome! Ask me anything about your data or paste content for analysis.
+        </div>
+      `;
+    }
+    
+    function showError(message) {
+      document.getElementById('error').textContent = message;
+      setTimeout(() => {
+        document.getElementById('error').textContent = '';
+      }, 5000);
+    }
+  </script>
+</body>
+</html>

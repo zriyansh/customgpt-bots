@@ -4,6 +4,7 @@ import asyncio
 import logging
 from typing import Dict, Optional
 from datetime import datetime
+from dotenv import load_dotenv
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, BotCommand
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
@@ -12,6 +13,9 @@ import structlog
 
 from customgpt_client import CustomGPTClient
 from simple_cache import SimpleCache
+
+# Load environment variables
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -164,18 +168,25 @@ async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Handle user messages"""
-    user_id = update.effective_user.id
-    user_message = update.message.text
-    
+    await handle_message_text(
+        update.effective_chat.id,
+        update.effective_user.id,
+        update.message.text,
+        context
+    )
+
+
+async def handle_message_text(chat_id: int, user_id: int, user_message: str, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle text message processing"""
     # Check rate limits
     allowed, error_msg, stats = await cache.check_rate_limit(user_id, DAILY_LIMIT, MINUTE_LIMIT)
     
     if not allowed:
-        await update.message.reply_text(f"⚠️ {error_msg}")
+        await context.bot.send_message(chat_id=chat_id, text=f"⚠️ {error_msg}")
         return
     
     # Send typing indicator
-    await context.bot.send_chat_action(chat_id=update.effective_chat.id, action=ChatAction.TYPING)
+    await context.bot.send_chat_action(chat_id=chat_id, action=ChatAction.TYPING)
     
     try:
         # Get or create session
@@ -187,8 +198,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             if session_id:
                 await cache.set(f"session:{user_id}", session_id, ttl_seconds=1800)  # 30 minutes
             else:
-                await update.message.reply_text(
-                    "❌ Sorry, I couldn't start a conversation. Please try again later.",
+                await context.bot.send_message(
+                    chat_id=chat_id,
+                    text="❌ Sorry, I couldn't start a conversation. Please try again later.",
                     parse_mode=ParseMode.MARKDOWN
                 )
                 return
@@ -203,9 +215,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if response and response.get('openai_response'):
             bot_response = response['openai_response']
             
-            # Send response
-            await update.message.reply_text(
-                bot_response,
+            # Send response with typing effect
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text=bot_response,
                 parse_mode=ParseMode.MARKDOWN
             )
             
@@ -215,15 +228,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
                        session_id=session_id,
                        message_length=len(user_message))
         else:
-            await update.message.reply_text(
-                "❌ I couldn't get a response. Please try again.",
+            await context.bot.send_message(
+                chat_id=chat_id,
+                text="❌ I couldn't get a response. Please try again.",
                 parse_mode=ParseMode.MARKDOWN
             )
             
     except Exception as e:
         logger.error("message_handling_error", error=str(e), user_id=user_id)
-        await update.message.reply_text(
-            "❌ An error occurred. Please try again later.",
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text="❌ An error occurred. Please try again later.",
             parse_mode=ParseMode.MARKDOWN
         )
 
@@ -263,15 +278,15 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         # Delete the button message
         await query.message.delete()
         
-        # Send the question as a message from the user
-        await query.message.reply_text(f"You asked: _{question}_", parse_mode=ParseMode.MARKDOWN)
+        # Send the question as a message
+        await context.bot.send_message(
+            chat_id=query.message.chat.id,
+            text=f"You asked: _{question}_",
+            parse_mode=ParseMode.MARKDOWN
+        )
         
-        # Create a fake update object to reuse handle_message
-        update.message = query.message
-        update.message.text = question
-        update.effective_user = query.from_user
-        
-        await handle_message(update, context)
+        # Process the question
+        await handle_message_text(query.message.chat.id, query.from_user.id, question, context)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

@@ -1,8 +1,8 @@
 import asyncio
 import time
 from collections import defaultdict
-from typing import Dict, Tuple
-import aioredis
+from typing import Dict, Tuple, Any
+import redis.asyncio as redis
 import json
 import logging
 
@@ -18,7 +18,7 @@ class RateLimiter:
         """Connect to Redis if URL is provided"""
         if self.redis_url:
             try:
-                self.redis = await aioredis.from_url(self.redis_url)
+                self.redis = await redis.from_url(self.redis_url)
                 await self.redis.ping()
                 logger.info("Connected to Redis for rate limiting")
             except Exception as e:

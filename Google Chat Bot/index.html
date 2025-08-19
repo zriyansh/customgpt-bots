@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CustomGPT Chat</title>
+  
+  <!-- Material Design Icons and Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  
+  <?!= include('styles'); ?>
+</head>
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="app-header">
+      <h1>
+        <img src="https://www.customgpt.ai/favicon.ico" alt="CustomGPT" class="logo">
+        CustomGPT Chat
+      </h1>
+      <div class="header-actions">
+        <button class="icon-button" onclick="showInfo()" title="Agent Info">
+          <i class="material-icons">info</i>
+        </button>
+        <button class="icon-button" onclick="resetChat()" title="Reset Chat">
+          <i class="material-icons">refresh</i>
+        </button>
+        <button class="icon-button" onclick="toggleTheme()" title="Toggle Theme">
+          <i class="material-icons" id="theme-icon">dark_mode</i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Container -->
+    <div class="chat-container" id="chat-container">
+      <!-- Welcome Message -->
+      <div class="message bot-message welcome-message">
+        <div class="message-avatar">
+          <i class="material-icons">smart_toy</i>
+        </div>
+        <div class="message-content">
+          <p>👋 Hello! I'm your CustomGPT assistant. How can I help you today?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Starter Questions -->
+    <div class="starter-questions" id="starter-questions">
+      <p class="starter-label">Suggested questions:</p>
+      <div class="starter-buttons" id="starter-buttons">
+        <!-- Populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-container">
+      <form id="chat-form" class="chat-form">
+        <div class="input-wrapper">
+          <textarea 
+            id="user-input" 
+            class="user-input" 
+            placeholder="Type your message here..."
+            rows="1"
+            required
+          ></textarea>
+          <button type="submit" class="send-button" id="send-button">
+            <i class="material-icons">send</i>
+          </button>
+        </div>
+      </form>
+      <div class="input-info">
+        <span id="char-count">0 / 2000</span>
+        <span class="rate-limit-info" id="rate-limit-info"></span>
+      </div>
+    </div>
+
+    <!-- Loading Indicator -->
+    <div class="loading-overlay" id="loading">
+      <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Error Toast -->
+    <div class="toast" id="error-toast">
+      <i class="material-icons">error_outline</i>
+      <span id="error-message"></span>
+    </div>
+
+    <!-- Info Modal -->
+    <div class="modal" id="info-modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Agent Information</h2>
+          <button class="icon-button" onclick="closeModal('info-modal')">
+            <i class="material-icons">close</i>
+          </button>
+        </div>
+        <div class="modal-body" id="agent-info">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <?!= include('javascript'); ?>
+</body>
+</html>
