@@ -1,4 +1,4 @@
-# CustomGPT Integrations
+# CustomGPT Integrations (beta)
 
 A collection of chatbot integrations for CustomGPT, allowing you to deploy AI-powered bots across multiple platforms using your CustomGPT agent's knowledge base.
 
@@ -15,7 +15,7 @@ Integrate CustomGPT with WhatsApp using Twilio's WhatsApp Business API.
 * **Features**: Rich media support, rate limiting, session management, starter questions
 * **Setup Time**: 15-30 minutes
 * **Hosting Options**: Railway, Render, Fly.io, Google Apps Script
-* **[Full Documentation](whatsapp/README.md)**
+* **[Full Documentation](Whatsapp-Bot/README.md)**
 
 ---
 
@@ -28,7 +28,7 @@ A powerful Discord bot that brings CustomGPT's intelligence to your Discord serv
 * **Features**: Slash commands, conversation memory, interactive UI, source citations
 * **Setup Time**: 10-20 minutes
 * **Hosting Options**: Railway, Fly.io, Docker, Replit
-* **[Full Documentation](discord/README.md)**
+* **[Full Documentation](Discord-Bot/README.md)**
 
 ---
 
@@ -42,7 +42,7 @@ Enterprise-ready Slack integration with multi-agent support and advanced feature
 * **Features**: Multi-agent support, thread conversations, rate limiting, analytics
 * **Setup Time**: 20-30 minutes
 * **Hosting Options**: Google Apps Script, Railway, Docker, Kubernetes
-* **[Full Documentation](slack/README.md)**
+* **[Full Documentation](Slack-Bot/README.md)**
 
 ---
 
@@ -55,7 +55,7 @@ Fast and reliable Telegram bot with polling and webhook support.
 * **Features**: Inline keyboards, conversation management, usage statistics, SSL support
 * **Setup Time**: 10-15 minutes
 * **Hosting Options**: Replit, Vercel, Railway, any VPS
-* **[Full Documentation](telegram/README.md)**
+* **[Full Documentation](Telegram-Bot/README.md)**
 
 ---
 
@@ -66,7 +66,19 @@ Native Google Workspace integration for enterprise environments.
 * **Features**: Direct messages, space conversations, multi-agent support
 * **Setup Time**: 15-20 minutes
 * **Hosting**: Google Apps Script (free)
-* **[Full Documentation](Google%20Chat%20Bot/README.md)**
+* **[Full Documentation](Google%20Chat-Bot/README.md)**
+
+---
+
+### 1.6 Facebook Messenger Bot (Work in Progress)
+
+Connect CustomGPT with Facebook Messenger for seamless customer interactions.
+
+* **Status**: 🚧 Currently under development
+* **Features**: Quick replies, persistent menu, typing indicators, media support
+* **Setup Time**: 20-30 minutes (estimated)
+* **Hosting Options**: Vercel, Google Apps Script, Node.js hosting
+* **[Full Documentation](Facebook%20Messenger-Bot/README.md)**
 
 ---
 
@@ -98,20 +110,21 @@ Native Google Workspace integration for enterprise environments.
 * **Slack**: Slack workspace with admin access
 * **Telegram**: Telegram Bot Father token
 * **Google Chat**: Google Workspace account
+* **Facebook Messenger**: Facebook Page and App (developer account)
 
 ---
 
 ## 4. Feature Comparison
 
-| Feature          | WhatsApp | Discord | Slack  | Telegram | Google Chat |
-| ---------------- | -------- | ------- | ------ | -------- | ----------- |
-| Free Hosting     | ✔        | ✔       | ✔      | ✔        | ✔           |
-| Rate Limiting    | ✔        | ✔       | ✔      | ✔        | ✔           |
-| Multi-Agent      | ✖        | ✖       | ✔      | ✖        | ✔           |
-| Rich Media       | ✔        | ✔       | ✔      | ✔        | Limited     |
-| Threading        | ✖        | ✔       | ✔      | ✖        | ✔           |
-| Analytics        | ✔        | ✖       | ✔      | ✔        | ✖           |
-| Setup Complexity | Medium   | Easy    | Medium | Easy     | Easy        |
+| Feature          | WhatsApp | Discord | Slack  | Telegram | Google Chat | FB Messenger |
+| ---------------- | -------- | ------- | ------ | -------- | ----------- | ------------ |
+| Free Hosting     | ✔        | ✔       | ✔      | ✔        | ✔           | 🚧 WIP       |
+| Rate Limiting    | ✔        | ✔       | ✔      | ✔        | ✔           | 🚧 WIP       |
+| Multi-Agent      | ✖        | ✖       | ✔      | ✖        | ✔           | 🚧 WIP       |
+| Rich Media       | ✔        | ✔       | ✔      | ✔        | Limited     | 🚧 WIP       |
+| Threading        | ✖        | ✔       | ✔      | ✖        | ✔           | 🚧 WIP       |
+| Analytics        | ✔        | ✖       | ✔      | ✔        | ✖           | 🚧 WIP       |
+| Setup Complexity | Medium   | Easy    | Medium | Easy     | Easy        | 🚧 WIP       |
 
 ---
 
