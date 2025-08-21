@@ -70,7 +70,19 @@ Native Google Workspace integration for enterprise environments.
 
 ---
 
-### 1.6 Facebook Messenger Bot (Work in Progress)
+### 1.6 Microsoft Teams Bot (Work in Progress)
+
+Enterprise-grade Microsoft Teams integration with advanced collaboration features.
+
+* **Status**: 🚧 Currently under development
+* **Features**: Adaptive Cards, @mentions, threading, meeting support, file attachments
+* **Setup Time**: 20-30 minutes
+* **Hosting Options**: Azure Bot Service, Railway, Render, Docker
+* **[Full Documentation](MS%20Teams/README.md)**
+
+---
+
+### 1.7 Facebook Messenger Bot (Work in Progress)
 
 Connect CustomGPT with Facebook Messenger for seamless customer interactions.
 
@@ -110,21 +122,22 @@ Connect CustomGPT with Facebook Messenger for seamless customer interactions.
 * **Slack**: Slack workspace with admin access
 * **Telegram**: Telegram Bot Father token
 * **Google Chat**: Google Workspace account
+* **Microsoft Teams**: Azure account (free tier available), Teams admin access
 * **Facebook Messenger**: Facebook Page and App (developer account)
 
 ---
 
 ## 4. Feature Comparison
 
-| Feature          | WhatsApp | Discord | Slack  | Telegram | Google Chat | FB Messenger |
-| ---------------- | -------- | ------- | ------ | -------- | ----------- | ------------ |
-| Free Hosting     | ✔        | ✔       | ✔      | ✔        | ✔           | 🚧 WIP       |
-| Rate Limiting    | ✔        | ✔       | ✔      | ✔        | ✔           | 🚧 WIP       |
-| Multi-Agent      | ✖        | ✖       | ✔      | ✖        | ✔           | 🚧 WIP       |
-| Rich Media       | ✔        | ✔       | ✔      | ✔        | Limited     | 🚧 WIP       |
-| Threading        | ✖        | ✔       | ✔      | ✖        | ✔           | 🚧 WIP       |
-| Analytics        | ✔        | ✖       | ✔      | ✔        | ✖           | 🚧 WIP       |
-| Setup Complexity | Medium   | Easy    | Medium | Easy     | Easy        | 🚧 WIP       |
+| Feature          | WhatsApp | Discord | Slack  | Telegram | Google Chat | MS Teams | FB Messenger |
+| ---------------- | -------- | ------- | ------ | -------- | ----------- | -------- | ------------ |
+| Free Hosting     | ✔        | ✔       | ✔      | ✔        | ✔           | ✔        | 🚧 WIP       |
+| Rate Limiting    | ✔        | ✔       | ✔      | ✔        | ✔           | ✔        | 🚧 WIP       |
+| Multi-Agent      | ✖        | ✖       | ✔      | ✖        | ✔           | ✖        | 🚧 WIP       |
+| Rich Media       | ✔        | ✔       | ✔      | ✔        | Limited     | ✔        | 🚧 WIP       |
+| Threading        | ✖        | ✔       | ✔      | ✖        | ✔           | ✔        | 🚧 WIP       |
+| Analytics        | ✔        | ✖       | ✔      | ✔        | ✖           | ✔        | 🚧 WIP       |
+| Setup Complexity | Medium   | Easy    | Medium | Easy     | Easy        | Medium   | 🚧 WIP       |
 
 ---
 

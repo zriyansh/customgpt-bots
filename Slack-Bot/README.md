@@ -13,7 +13,8 @@ A Slack bot that integrates with CustomGPT's RAG (Retrieval-Augmented Generation
 - **Security**: API key management, user authentication, and input validation
 - **Conversation Management**: Maintain conversation context across messages
 - **Interactive UI**: Buttons, modals, and rich formatting
-- **Thread Support**: Keep conversations organized in threads
+- **Thread Support**: Keep conversations organized in threads with automatic follow-up responses
+- **Thread Follow-ups**: Once mentioned in a thread, bot responds to all messages without requiring mentions
 - **Error Handling**: Graceful error messages and retry logic
 - **Analytics**: Track usage and performance metrics
 
@@ -201,16 +202,38 @@ Default limits:
 
 ### Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `SLACK_BOT_TOKEN` | Bot User OAuth Token | Yes |
-| `SLACK_SIGNING_SECRET` | For verifying requests | Yes |
-| `CUSTOMGPT_API_KEY` | Your CustomGPT API key | Yes |
-| `CUSTOMGPT_PROJECT_ID` | Default agent/project ID | Yes |
-| `REDIS_URL` | Redis URL for caching | No |
-| `LOG_LEVEL` | Logging level (INFO, DEBUG) | No |
-| `RATE_LIMIT_PER_USER` | Requests per user per minute | No |
-| `RATE_LIMIT_PER_CHANNEL` | Requests per channel per hour | No |
+| Variable | Description | Required | Default |
+|----------|-------------|----------|---------|
+| `SLACK_BOT_TOKEN` | Bot User OAuth Token | Yes | - |
+| `SLACK_SIGNING_SECRET` | For verifying requests | Yes | - |
+| `CUSTOMGPT_API_KEY` | Your CustomGPT API key | Yes | - |
+| `CUSTOMGPT_PROJECT_ID` | Default agent/project ID | Yes | - |
+| `REDIS_URL` | Redis URL for caching | No | - |
+| `LOG_LEVEL` | Logging level (INFO, DEBUG) | No | INFO |
+| `RATE_LIMIT_PER_USER` | Requests per user per minute | No | 20 |
+| `RATE_LIMIT_PER_CHANNEL` | Requests per channel per hour | No | 100 |
+| `THREAD_FOLLOW_UP_ENABLED` | Enable thread follow-up responses | No | true |
+| `THREAD_FOLLOW_UP_TIMEOUT` | Thread follow-up timeout (seconds) | No | 3600 |
+| `THREAD_FOLLOW_UP_MAX_MESSAGES` | Max messages per thread | No | 50 |
+| `IGNORE_BOT_MESSAGES` | Ignore messages from bots | No | true |
+
+### Thread Follow-up Feature
+
+The bot can automatically respond to follow-up messages in threads without requiring mentions:
+
+1. **How it works**: When someone mentions the bot in a thread, it "joins" the conversation
+2. **Follow-ups**: Users can continue asking questions without @mentioning the bot
+3. **Timeout**: Bot stops responding after `THREAD_FOLLOW_UP_TIMEOUT` seconds of inactivity
+4. **Message limit**: Bot stops after `THREAD_FOLLOW_UP_MAX_MESSAGES` messages
+5. **Bot protection**: Ignores messages from other bots to prevent loops
+
+**Example:**
+```
+User: @CustomGPT what is the weather?
+Bot: The weather is sunny today.
+User: What about tomorrow?  (no @mention needed)
+Bot: Tomorrow will be cloudy with a chance of rain.
+```
 
 ### Security Best Practices
 

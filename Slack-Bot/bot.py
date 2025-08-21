@@ -45,6 +45,8 @@ analytics = Analytics()
 
 # Store active agent IDs per channel/user
 agent_registry: Dict[str, str] = {}
+# Store bot user ID for message filtering
+bot_user_id: Optional[str] = None
 
 def get_agent_id(channel_id: str, user_id: str) -> str:
     """Get the active agent ID for a channel or user"""
@@ -170,6 +172,10 @@ async def handle_app_mention(event: Dict[str, Any], client: AsyncWebClient, say)
             formatted_response = await format_response_with_citations(response)
             await say(**formatted_response, thread_ts=thread_ts)
             
+            # Mark thread participation for follow-ups
+            if thread_ts:
+                conversation_manager.mark_thread_participation(channel_id, thread_ts)
+            
             # Log successful response
             await analytics.track_response(user_id, channel_id, agent_id, success=True)
             
@@ -187,11 +193,63 @@ async def handle_app_mention(event: Dict[str, Any], client: AsyncWebClient, say)
 
 @app.event("message")
 async def handle_direct_message(event: Dict[str, Any], client: AsyncWebClient, say):
-    """Handle direct messages to the bot"""
-    # Only process direct messages (not channel messages)
-    if event.get('channel_type') == 'im' and not event.get('bot_id'):
+    """Handle direct messages and thread follow-ups"""
+    # Skip system messages and edits
+    subtype = event.get('subtype')
+    if subtype in ['message_changed', 'message_deleted', 'channel_join', 'channel_leave', 'bot_add', 'bot_remove']:
+        return
+    
+    # Skip empty messages
+    if not event.get('text', '').strip():
+        return
+    
+    # Skip bot messages to prevent loops
+    if Config.IGNORE_BOT_MESSAGES:
+        # Check multiple indicators of bot messages
+        if (event.get('bot_id') or 
+            subtype == 'bot_message' or
+            event.get('user') == bot_user_id):
+            return
+        
+        # Additional bot detection using user info (if needed)
+        user_id = event.get('user')
+        if user_id:
+            try:
+                user_info = await client.users_info(user=user_id)
+                if user_info.get('user', {}).get('is_bot'):
+                    return
+            except Exception:
+                # If we can't check user info, continue with other checks
+                pass
+    
+    # Handle direct messages
+    if event.get('channel_type') == 'im':
         # Reuse app_mention handler logic
         await handle_app_mention(event, client, say)
+        return
+    
+    # Handle thread follow-ups (when enabled)
+    if Config.THREAD_FOLLOW_UP_ENABLED:
+        channel_id = event.get('channel')
+        thread_ts = event.get('thread_ts')
+        
+        # Check if this is a thread message (not a broadcast)
+        if thread_ts and thread_ts != event.get('ts'):
+            # Skip thread broadcast messages (posted to channel too)
+            if event.get('subtype') == 'thread_broadcast':
+                return
+            
+            # Check if bot should respond to this thread
+            should_respond, reason = conversation_manager.should_respond_to_thread(channel_id, thread_ts)
+            
+            if should_respond:
+                logger.info(f"Responding to thread follow-up: {reason}")
+                # Update thread activity
+                conversation_manager.update_thread_activity(channel_id, thread_ts)
+                # Handle as if it was a mention
+                await handle_app_mention(event, client, say)
+            else:
+                logger.debug(f"Not responding to thread: {reason}")
 
 async def show_starter_questions(say, thread_ts: str, questions: List[str]):
     """Display starter questions with interactive buttons"""
@@ -415,9 +473,36 @@ async def global_error_handler(error, body, logger):
     logger.error(f"Error: {error}")
     logger.error(f"Request body: {body}")
 
+async def initialize_bot():
+    """Initialize bot and get bot user ID"""
+    global bot_user_id
+    try:
+        # Get bot user ID
+        auth_response = await app.client.auth_test()
+        bot_user_id = auth_response['user_id']
+        logger.info(f"Bot initialized with user ID: {bot_user_id}")
+        
+        # Schedule periodic cleanup
+        async def periodic_cleanup():
+            while True:
+                await asyncio.sleep(3600)  # Run every hour
+                conversation_manager.cleanup_expired_conversations()
+                conversation_manager.cleanup_expired_thread_participation()
+                logger.info("Completed periodic cleanup")
+        
+        # Start cleanup task
+        asyncio.create_task(periodic_cleanup())
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize bot: {str(e)}")
+        raise
+
 async def main():
     """Main function to start the bot"""
     try:
+        # Initialize bot
+        await initialize_bot()
+        
         # Start the bot
         if Config.SLACK_APP_TOKEN:
             # Socket Mode (for development)

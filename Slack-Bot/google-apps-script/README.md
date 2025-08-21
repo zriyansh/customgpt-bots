@@ -10,7 +10,7 @@ This is a free, serverless implementation of the CustomGPT Slack Bot using Googl
 - ✅ **Easy Deployment** - Web-based IDE
 - ✅ **Multi-Agent Support** - Switch between different CustomGPT agents
 - ✅ **Rate Limiting** - Per-user and per-channel limits
-- ✅ **Thread Support** - Maintains conversation context in threads
+- ✅ **Thread Support** - Maintains conversation context in threads with automatic follow-ups
 - ✅ **Slash Commands** - `/customgpt`, `/customgpt-agent`, `/customgpt-help`
 - ⚠️ **Limitations** - 6-minute execution time, 20MB response limit
 
@@ -38,6 +38,12 @@ This is a free, serverless implementation of the CustomGPT Slack Bot using Googl
    - `SLACK_SIGNING_SECRET` - Your Slack signing secret
    - `CUSTOMGPT_API_KEY` - Your CustomGPT API key
    - `CUSTOMGPT_PROJECT_ID` - Your default CustomGPT project/agent ID
+   
+   Optional properties for thread follow-up feature:
+   - `THREAD_FOLLOW_UP_ENABLED` - Enable thread follow-ups (default: true)
+   - `THREAD_FOLLOW_UP_TIMEOUT` - Timeout in seconds (default: 3600)
+   - `THREAD_FOLLOW_UP_MAX_MESSAGES` - Max messages per thread (default: 50)
+   - `IGNORE_BOT_MESSAGES` - Ignore bot messages (default: true)
 
 ### 4. Deploy as Web App
 
@@ -59,6 +65,7 @@ This is a free, serverless implementation of the CustomGPT Slack Bot using Googl
 5. Add Bot Events:
    - `app_mention`
    - `message.im`
+   - `message.channels` (required for thread follow-ups)
 6. Save changes
 
 ### 6. Configure Slash Commands (Optional)
@@ -87,9 +94,10 @@ For each slash command:
 
 1. **Rate Limiting**: Uses built-in cache service (limited to 100MB)
 2. **Conversation State**: Stored in cache with 6-hour expiry
-3. **No Persistent Storage**: Agent switching lasts for 24 hours in cache
-4. **Synchronous Only**: No true async support
-5. **Citations Disabled**: Source links disabled to avoid broken references
+3. **Thread Tracking**: Thread participation stored in cache with configurable timeout
+4. **No Persistent Storage**: Agent switching lasts for 24 hours in cache
+5. **Synchronous Only**: No true async support
+6. **Citations Disabled**: Source links disabled to avoid broken references
 
 ## Customization
 
@@ -111,6 +119,13 @@ To enable citations (if CustomGPT provides valid URLs):
 ```javascript
 SHOW_CITATIONS: true  // Currently false to avoid broken links
 ```
+
+### Configure Thread Follow-ups
+
+Adjust thread follow-up behavior in Script Properties:
+- `THREAD_FOLLOW_UP_ENABLED` - Set to 'false' to disable
+- `THREAD_FOLLOW_UP_TIMEOUT` - Seconds before bot stops responding (default: 3600)
+- `THREAD_FOLLOW_UP_MAX_MESSAGES` - Max messages per thread (default: 50)
 
 ### Add Custom Features
 
@@ -169,6 +184,22 @@ When you outgrow Google Apps Script, you can easily migrate to:
 - **Direct Message**: Just type your question in a DM with the bot
 - **Mention in Channel**: `@CustomGPT your question here`
 - **Slash Command**: `/customgpt your question here`
+
+### Thread Follow-ups
+
+Once the bot responds to your mention in a thread, you can continue the conversation without mentioning it again:
+
+```
+User: @CustomGPT what is the weather?
+Bot: The weather is sunny today.
+User: What about tomorrow?  (no @mention needed)
+Bot: Tomorrow will be cloudy with a chance of rain.
+```
+
+The bot will continue responding in the thread until:
+- The timeout expires (default: 1 hour)
+- The message limit is reached (default: 50 messages)
+- You start a new thread
 
 ### Agent Management
 

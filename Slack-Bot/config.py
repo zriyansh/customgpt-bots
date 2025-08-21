@@ -49,6 +49,12 @@ class Config:
     CONVERSATION_TIMEOUT: int = int(os.environ.get('CONVERSATION_TIMEOUT', '86400'))  # 24 hours
     MAX_CONTEXT_MESSAGES: int = int(os.environ.get('MAX_CONTEXT_MESSAGES', '10'))
     
+    # Thread Follow-up Configuration
+    THREAD_FOLLOW_UP_ENABLED: bool = os.environ.get('THREAD_FOLLOW_UP_ENABLED', 'true').lower() == 'true'
+    THREAD_FOLLOW_UP_TIMEOUT: int = int(os.environ.get('THREAD_FOLLOW_UP_TIMEOUT', '3600'))  # 1 hour
+    THREAD_FOLLOW_UP_MAX_MESSAGES: int = int(os.environ.get('THREAD_FOLLOW_UP_MAX_MESSAGES', '50'))
+    IGNORE_BOT_MESSAGES: bool = os.environ.get('IGNORE_BOT_MESSAGES', 'true').lower() == 'true'
+    
     @classmethod
     def validate(cls) -> bool:
         """Validate required configuration"""

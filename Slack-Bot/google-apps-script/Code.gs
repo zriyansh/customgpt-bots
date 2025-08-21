@@ -12,7 +12,12 @@ const CONFIG = {
   CUSTOMGPT_API_BASE_URL: 'https://app.customgpt.ai/api/v1',
   RATE_LIMIT_PER_USER: 20,
   RATE_LIMIT_PER_CHANNEL: 100,
-  SHOW_CITATIONS: false  // Disabled to avoid broken source links
+  SHOW_CITATIONS: false,  // Disabled to avoid broken source links
+  // Thread follow-up configuration
+  THREAD_FOLLOW_UP_ENABLED: PropertiesService.getScriptProperties().getProperty('THREAD_FOLLOW_UP_ENABLED') !== 'false',
+  THREAD_FOLLOW_UP_TIMEOUT: parseInt(PropertiesService.getScriptProperties().getProperty('THREAD_FOLLOW_UP_TIMEOUT') || '3600'),
+  THREAD_FOLLOW_UP_MAX_MESSAGES: parseInt(PropertiesService.getScriptProperties().getProperty('THREAD_FOLLOW_UP_MAX_MESSAGES') || '50'),
+  IGNORE_BOT_MESSAGES: PropertiesService.getScriptProperties().getProperty('IGNORE_BOT_MESSAGES') !== 'false'
 };
 
 // Cache service
@@ -68,7 +73,30 @@ function doPost(e) {
         cache.put(msgKey, '1', 300);
         
         // Process the message
-        processUserMessage(event);
+        processUserMessage(event, true); // isDirectMention = true
+      }
+      // Handle thread follow-ups (when enabled)
+      else if (CONFIG.THREAD_FOLLOW_UP_ENABLED && event.type === 'message' && event.thread_ts && event.thread_ts !== event.ts) {
+        // Skip thread broadcast messages
+        if (event.subtype === 'thread_broadcast') {
+          return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
+        }
+        
+        // Check if bot should respond to this thread
+        if (shouldRespondToThread(event.channel, event.thread_ts)) {
+          // Additional deduplication
+          const msgKey = `msg_${event.channel}_${event.ts}`;
+          if (cache.get(msgKey)) {
+            return ContentService.createTextOutput('OK').setMimeType(ContentService.MimeType.TEXT);
+          }
+          cache.put(msgKey, '1', 300);
+          
+          // Update thread activity
+          updateThreadActivity(event.channel, event.thread_ts);
+          
+          // Process the message
+          processUserMessage(event, false); // isDirectMention = false
+        }
       }
     }
     
@@ -83,11 +111,16 @@ function doPost(e) {
 /**
  * Process user messages
  */
-function processUserMessage(event) {
+function processUserMessage(event, isDirectMention) {
   const userId = event.user;
   const channelId = event.channel;
   const text = (event.text || '').replace(/<@[A-Z0-9]+>/g, '').trim();
   const threadTs = event.thread_ts || event.ts;
+  
+  // Mark thread participation if this is a direct mention
+  if (isDirectMention && threadTs && CONFIG.THREAD_FOLLOW_UP_ENABLED) {
+    markThreadParticipation(channelId, threadTs);
+  }
   
   // Rate limiting
   const rateKey = `rate_${userId}`;
@@ -258,7 +291,7 @@ function handleSlashCommand(params) {
         ts: new Date().getTime() / 1000
       };
       
-      processUserMessage(event);
+      processUserMessage(event, true);
       
       return ContentService.createTextOutput('').setMimeType(ContentService.MimeType.TEXT);
       
@@ -287,7 +320,8 @@ function handleSlashCommand(params) {
         `*Usage:*\n` +
         `• Direct message me\n` +
         `• Mention me: @CustomGPT\n` +
-        `• Slash command: /customgpt [question]\n\n` +
+        `• Slash command: /customgpt [question]\n` +
+        `• Thread follow-ups: Continue conversation without mentions\n\n` +
         `*Commands:*\n` +
         `• \`/customgpt [question]\` - Ask a question\n` +
         `• \`/customgpt-agent [id]\` - Switch agent\n` +
@@ -354,6 +388,75 @@ function updateMessage(channel, text, ts) {
 }
 
 /**
+ * Thread participation tracking functions
+ */
+
+/**
+ * Mark that bot has participated in a thread
+ */
+function markThreadParticipation(channelId, threadTs) {
+  if (!CONFIG.THREAD_FOLLOW_UP_ENABLED || !threadTs) {
+    return;
+  }
+  
+  const threadKey = `thread_${channelId}_${threadTs}`;
+  const threadData = {
+    firstParticipation: new Date().getTime(),
+    lastActivity: new Date().getTime(),
+    messageCount: 1
+  };
+  
+  // Store thread participation info (cache expires after timeout)
+  cache.put(threadKey, JSON.stringify(threadData), CONFIG.THREAD_FOLLOW_UP_TIMEOUT);
+  
+  // Also store a simple flag for quick checks
+  cache.put(`thread_active_${channelId}_${threadTs}`, '1', CONFIG.THREAD_FOLLOW_UP_TIMEOUT);
+}
+
+/**
+ * Update thread activity
+ */
+function updateThreadActivity(channelId, threadTs) {
+  const threadKey = `thread_${channelId}_${threadTs}`;
+  const threadDataStr = cache.get(threadKey);
+  
+  if (threadDataStr) {
+    try {
+      const threadData = JSON.parse(threadDataStr);
+      threadData.lastActivity = new Date().getTime();
+      threadData.messageCount = (threadData.messageCount || 0) + 1;
+      
+      // Check message limit
+      if (threadData.messageCount >= CONFIG.THREAD_FOLLOW_UP_MAX_MESSAGES) {
+        // Remove thread participation
+        cache.remove(threadKey);
+        cache.remove(`thread_active_${channelId}_${threadTs}`);
+        return;
+      }
+      
+      // Update cache
+      cache.put(threadKey, JSON.stringify(threadData), CONFIG.THREAD_FOLLOW_UP_TIMEOUT);
+      cache.put(`thread_active_${channelId}_${threadTs}`, '1', CONFIG.THREAD_FOLLOW_UP_TIMEOUT);
+    } catch (e) {
+      // Re-mark participation if parsing fails
+      markThreadParticipation(channelId, threadTs);
+    }
+  }
+}
+
+/**
+ * Check if bot should respond to a thread
+ */
+function shouldRespondToThread(channelId, threadTs) {
+  if (!CONFIG.THREAD_FOLLOW_UP_ENABLED || !threadTs) {
+    return false;
+  }
+  
+  // Quick check using simple flag
+  return cache.get(`thread_active_${channelId}_${threadTs}`) === '1';
+}
+
+/**
  * Test configuration
  */
 function testConfig() {
@@ -362,6 +465,9 @@ function testConfig() {
     hasSecret: !!CONFIG.SLACK_SIGNING_SECRET,
     hasApiKey: !!CONFIG.CUSTOMGPT_API_KEY,
     hasProjectId: !!CONFIG.CUSTOMGPT_PROJECT_ID,
-    projectId: CONFIG.CUSTOMGPT_PROJECT_ID
+    projectId: CONFIG.CUSTOMGPT_PROJECT_ID,
+    threadFollowUpEnabled: CONFIG.THREAD_FOLLOW_UP_ENABLED,
+    threadTimeout: CONFIG.THREAD_FOLLOW_UP_TIMEOUT,
+    threadMaxMessages: CONFIG.THREAD_FOLLOW_UP_MAX_MESSAGES
   });
 }

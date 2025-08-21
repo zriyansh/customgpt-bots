@@ -1,0 +1,90 @@
+{
+    "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.16/MicrosoftTeams.schema.json",
+    "manifestVersion": "1.16",
+    "version": "1.0.0",
+    "id": "YOUR-APP-ID-HERE",
+    "packageName": "com.customgpt.teams.bot",
+    "developer": {
+        "name": "CustomGPT",
+        "websiteUrl": "https://customgpt.ai",
+        "privacyUrl": "https://customgpt.ai/privacy",
+        "termsOfUseUrl": "https://customgpt.ai/terms"
+    },
+    "icons": {
+        "color": "color.png",
+        "outline": "outline.png"
+    },
+    "name": {
+        "short": "CustomGPT Bot",
+        "full": "CustomGPT Knowledge Base Assistant"
+    },
+    "description": {
+        "short": "AI-powered assistant connected to your CustomGPT knowledge base",
+        "full": "CustomGPT Bot brings your organization's knowledge base directly into Microsoft Teams. Ask questions, get instant answers, and access your curated information without leaving Teams."
+    },
+    "accentColor": "#FFFFFF",
+    "bots": [
+        {
+            "botId": "YOUR-BOT-ID-HERE",
+            "scopes": [
+                "personal",
+                "team",
+                "groupchat"
+            ],
+            "needsChannelSelector": false,
+            "isNotificationOnly": false,
+            "supportsFiles": true,
+            "supportsCalling": false,
+            "supportsVideo": false,
+            "commandLists": [
+                {
+                    "scopes": [
+                        "personal",
+                        "team",
+                        "groupchat"
+                    ],
+                    "commands": [
+                        {
+                            "title": "help",
+                            "description": "Show help and available commands"
+                        },
+                        {
+                            "title": "start",
+                            "description": "Start a new conversation"
+                        },
+                        {
+                            "title": "reset",
+                            "description": "Reset the current conversation"
+                        },
+                        {
+                            "title": "status",
+                            "description": "Check bot status and rate limits"
+                        },
+                        {
+                            "title": "feedback",
+                            "description": "Provide feedback about the bot"
+                        }
+                    ]
+                }
+            ]
+        }
+    ],
+    "permissions": [
+        "identity",
+        "messageTeamMembers"
+    ],
+    "validDomains": [
+        "customgpt.ai",
+        "app.customgpt.ai",
+        "*.azurewebsites.net"
+    ],
+    "webApplicationInfo": {
+        "id": "YOUR-AAD-APP-ID-HERE",
+        "resource": "api://YOUR-DOMAIN/YOUR-BOT-ID"
+    },
+    "defaultInstallScope": "team",
+    "defaultGroupCapability": {
+        "team": "bot",
+        "groupchat": "bot"
+    }
+}

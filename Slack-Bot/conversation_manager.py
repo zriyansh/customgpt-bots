@@ -24,6 +24,8 @@ class ConversationManager:
         self.session_data: Dict[str, Dict[str, Any]] = {}
         # Map of user_id -> list of session_ids
         self.user_sessions: Dict[str, List[str]] = defaultdict(list)
+        # Map of thread_key (channel_id:thread_ts) -> thread participation info
+        self.thread_participation: Dict[str, Dict[str, Any]] = {}
     
     def get_or_create_conversation(self, user_id: str, channel_id: str, thread_ts: Optional[str] = None) -> str:
         """
@@ -221,3 +223,77 @@ class ConversationManager:
             self.user_sessions[user_id].remove(session_id)
             if not self.user_sessions[user_id]:
                 del self.user_sessions[user_id]
+    
+    def mark_thread_participation(self, channel_id: str, thread_ts: str):
+        """Mark that the bot has participated in a thread"""
+        if not Config.THREAD_FOLLOW_UP_ENABLED or not thread_ts:
+            return
+        
+        thread_key = f"{channel_id}:{thread_ts}"
+        self.thread_participation[thread_key] = {
+            'first_participation': time.time(),
+            'last_activity': time.time(),
+            'message_count': 1,
+            'channel_id': channel_id,
+            'thread_ts': thread_ts
+        }
+        logger.info(f"Marked thread participation: {thread_key}")
+    
+    def update_thread_activity(self, channel_id: str, thread_ts: str):
+        """Update thread activity timestamp and message count"""
+        if not thread_ts:
+            return
+        
+        thread_key = f"{channel_id}:{thread_ts}"
+        if thread_key in self.thread_participation:
+            self.thread_participation[thread_key]['last_activity'] = time.time()
+            self.thread_participation[thread_key]['message_count'] += 1
+    
+    def should_respond_to_thread(self, channel_id: str, thread_ts: str) -> Tuple[bool, str]:
+        """
+        Check if bot should respond to a message in a thread
+        
+        Returns:
+            Tuple of (should_respond, reason)
+        """
+        if not Config.THREAD_FOLLOW_UP_ENABLED:
+            return False, "Thread follow-up is disabled"
+        
+        if not thread_ts:
+            return False, "Not a thread message"
+        
+        thread_key = f"{channel_id}:{thread_ts}"
+        
+        # Check if bot has participated in this thread
+        if thread_key not in self.thread_participation:
+            return False, "Bot has not participated in this thread"
+        
+        thread_info = self.thread_participation[thread_key]
+        current_time = time.time()
+        
+        # Check if thread participation has expired
+        if current_time - thread_info['last_activity'] > Config.THREAD_FOLLOW_UP_TIMEOUT:
+            # Clean up expired participation
+            del self.thread_participation[thread_key]
+            return False, "Thread participation has expired"
+        
+        # Check message count limit
+        if thread_info['message_count'] >= Config.THREAD_FOLLOW_UP_MAX_MESSAGES:
+            return False, "Thread message limit reached"
+        
+        return True, "Bot should respond to thread follow-up"
+    
+    def cleanup_expired_thread_participation(self):
+        """Remove expired thread participations"""
+        current_time = time.time()
+        expired = []
+        
+        for thread_key, thread_info in self.thread_participation.items():
+            if current_time - thread_info['last_activity'] > Config.THREAD_FOLLOW_UP_TIMEOUT:
+                expired.append(thread_key)
+        
+        for thread_key in expired:
+            del self.thread_participation[thread_key]
+        
+        if expired:
+            logger.info(f"Cleaned up {len(expired)} expired thread participations")

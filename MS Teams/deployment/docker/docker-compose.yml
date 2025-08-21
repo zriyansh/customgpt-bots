@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  teams-bot:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: customgpt-teams-bot
+    ports:
+      - "3978:3978"
+    environment:
+      # Teams Configuration
+      - TEAMS_APP_ID=${TEAMS_APP_ID}
+      - TEAMS_APP_PASSWORD=${TEAMS_APP_PASSWORD}
+      - TEAMS_APP_TYPE=${TEAMS_APP_TYPE:-MultiTenant}
+      - TEAMS_TENANT_ID=${TEAMS_TENANT_ID}
+      
+      # CustomGPT Configuration
+      - CUSTOMGPT_API_KEY=${CUSTOMGPT_API_KEY}
+      - CUSTOMGPT_PROJECT_ID=${CUSTOMGPT_PROJECT_ID}
+      - CUSTOMGPT_API_BASE_URL=${CUSTOMGPT_API_BASE_URL:-https://app.customgpt.ai/api/v1}
+      
+      # Rate Limiting
+      - RATE_LIMIT_PER_USER=${RATE_LIMIT_PER_USER:-20}
+      - RATE_LIMIT_PER_CHANNEL=${RATE_LIMIT_PER_CHANNEL:-100}
+      - RATE_LIMIT_PER_TENANT=${RATE_LIMIT_PER_TENANT:-500}
+      
+      # Redis Configuration (optional)
+      - REDIS_URL=${REDIS_URL}
+      
+      # Bot Behavior
+      - SHOW_CITATIONS=${SHOW_CITATIONS:-true}
+      - ENABLE_THREADING=${ENABLE_THREADING:-true}
+      - REQUIRE_MENTION_IN_CHANNELS=${REQUIRE_MENTION_IN_CHANNELS:-true}
+      - ENABLE_ADAPTIVE_CARDS=${ENABLE_ADAPTIVE_CARDS:-true}
+      
+      # Security
+      - ALLOWED_TENANTS=${ALLOWED_TENANTS}
+      - ALLOWED_CHANNELS=${ALLOWED_CHANNELS}
+      - BLOCKED_USERS=${BLOCKED_USERS}
+      
+      # Logging
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3978/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - bot-network
+
+  # Optional Redis for distributed rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: customgpt-teams-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    networks:
+      - bot-network
+    profiles:
+      - with-redis
+
+  # Optional Ngrok for local development/testing
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: customgpt-teams-ngrok
+    command: http teams-bot:3978
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    ports:
+      - "4040:4040"
+    networks:
+      - bot-network
+    profiles:
+      - dev
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  redis-data:
